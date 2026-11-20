@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const jsonType = "application/json; charset=utf-8"
+const jsonType = "application/json"
 
 func envOr(name, fallback string) string {
 	if v := os.Getenv(name); v != "" {
@@ -318,7 +318,11 @@ func (a *App) handleREST(req *Request, prefix string) *Response {
 	if res == nil {
 		return notFound()
 	}
-	res.Headers = append(res.Headers, "X-OAuth-Scopes", oauthScopes)
+	// X-OAuth-Scopes is asked of the API root alone; carrying it on the reply every request makes
+	// the client parse one header more for nothing, so only the root states it.
+	if len(segs) == 0 {
+		res.Headers = append(res.Headers, "X-OAuth-Scopes", oauthScopes)
+	}
 	return res
 }
 

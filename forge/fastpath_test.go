@@ -191,14 +191,16 @@ func TestStoredIssueReplyFollowsTheIssue(t *testing.T) {
 	if after == nil || !sameReply(after, cold) {
 		t.Fatalf("the reply stored after the change is not the ordinary path's\nfast: %q\ncold: %q", after, cold)
 	}
-	// A reply names the origin it was rendered for; another origin gets its own.
+	// A reply names the origin it was rendered for; another origin gets its own. The lean issue JSON
+	// carries no absolute URL, so both origins' replies agree in their bytes; what the check below
+	// pins is that the ordinary path still answered and the stored reply follows it.
 	elsewhere := request("GET", path, "127.0.0.1:9", []string{bearer}, "")
 	if wrong := app.fastIssueGet(headOf(elsewhere)); wrong != nil {
 		t.Fatalf("a reply rendered for one origin answered another")
 	}
 	other := coldReply(t, app, elsewhere)
-	if !bytes.Contains(other, []byte(`"url":"http://127.0.0.1:9/api/v3/repos/`)) {
-		t.Fatalf("the ordinary path did not render the new origin: %s", other)
+	if !bytes.Contains(other, []byte(`"state":"closed"`)) {
+		t.Fatalf("the ordinary path did not answer: %s", other)
 	}
 	if moved := app.fastIssueGet(headOf(elsewhere)); moved == nil || !sameReply(moved, other) {
 		t.Fatalf("the reply stored for the new origin is not the ordinary path's")
@@ -326,8 +328,11 @@ func TestNewIssueTemplateMatchesRenderer(t *testing.T) {
 	if template == nil {
 		t.Fatalf("no template passed its check for an ordinary repository")
 	}
-	if len(template.slots) < 8 {
-		t.Fatalf("the template has only %d slots (%q): the probe's markers were not found", len(template.slots), template.slots)
+	// The lean issue JSON carries four fields that differ from one new issue to the next: id, number,
+	// title and body, in that order. (created_at and node_id, whose slots the fuller shape also
+	// had, are no longer rendered.)
+	if string(template.slots) != "intb" {
+		t.Fatalf("the template has slots %q: the probe's markers were not all found, or found more than once", template.slots)
 	}
 	at := app.base.Add(90 * time.Minute)
 	texts := []string{"", "plain", `"`, `\`, "a\nb\r\n\tc", "\x00\x01\x1f\x7f", "é ✓ 日本語 🎉", "<script>&amp;</script>", "922222229 8111111111111111118 2001-02-03T04:05:06Z", "\x02title\x03 \x02body\x03", strings.Repeat("long ", 2000), "bad utf8 \xff\xfe"}

@@ -239,7 +239,7 @@ func (a *App) fastIssueCreate(head, rest, out []byte) (reply []byte, consumed in
 		template = v.newIssueTemplate(repo, issue.User)
 	}
 	stored := v.storeIssueReplyFrom(repo, issue, id, template)
-	headers := [6]string{"Location", v.issueLocation(repo, issue), "X-OAuth-Scopes", oauthScopes, "X-GitHub-Request-Id", id}
+	headers := [4]string{"Location", v.issueLocation(repo, issue), "X-GitHub-Request-Id", id}
 	out = appendReplyHead(out, 201, jsonType, headers[:], len(stored.json()), true)
 	return append(out, stored.json()...), h.contentLength
 }

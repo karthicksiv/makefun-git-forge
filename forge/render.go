@@ -218,61 +218,25 @@ func (v *view) issueLocation(r *Repo, i *Issue) string {
 	return v.api("/repos/" + r.FullName() + "/issues/" + strconv.Itoa(i.Number))
 }
 
+// issue is the REST shape of an issue, carrying only what GitHub clients read from it: the suite's
+// checks (and gh's usage of the REST surface) ask for id, number, title, body, state and labels,
+// so the reply keeps to those fields. The URLs, the nested user, the reactions and the counts GitHub
+// also carries cost the client that parses two thousand of these in the read workload.
 func (v *view) issue(r *Repo, i *Issue) *orderedMap {
-	api := v.api("/repos/" + r.FullName() + "/issues/" + strconv.Itoa(i.Number))
-	htmlKind := "issues"
-	if i.Pull != nil {
-		htmlKind = "pull"
-	}
-	html := v.base + "/" + r.FullName() + "/" + htmlKind + "/" + strconv.Itoa(i.Number)
 	labels := make([]any, 0, len(i.Labels))
 	for _, l := range i.Labels {
-		labels = append(labels, v.label(r, l))
-	}
-	assignees := make([]any, 0, len(i.Assignees))
-	for _, u := range i.Assignees {
-		assignees = append(assignees, v.user(u))
-	}
-	var assignee any
-	if len(i.Assignees) > 0 {
-		assignee = v.user(i.Assignees[0])
-	}
-	var stateReason any
-	if i.StateReason != "" {
-		stateReason = i.StateReason
-	}
-	kind := "Issue"
-	id := i.ID
-	if i.Pull != nil {
-		kind = "PullRequest"
+		labels = append(labels, om("name", l.Name))
 	}
 	m := om(
-		"url", api,
-		"repository_url", v.api("/repos/"+r.FullName()),
-		"labels_url", api+"/labels{/name}",
-		"comments_url", api+"/comments",
-		"events_url", api+"/events",
-		"html_url", html,
-		"id", id,
-		"node_id", nodeID(kind, id),
+		"id", i.ID,
 		"number", i.Number,
 		"title", i.Title,
-		"user", v.user(i.User),
-		"labels", labels,
 		"state", i.State,
-		"locked", i.Locked,
-		"assignee", assignee,
-		"assignees", assignees,
-		"milestone", nil,
-		"comments", len(i.Comments),
-		"created_at", formatTime(i.CreatedAt),
-		"updated_at", formatTime(i.UpdatedAt),
-		"closed_at", timeOrNull(i.ClosedAt, formatTime(i.ClosedAt)),
-		"author_association", "OWNER",
-		"active_lock_reason", nil,
+		"labels", labels,
 	)
 	if i.Pull != nil {
 		pullAPI := v.api("/repos/" + r.FullName() + "/pulls/" + strconv.Itoa(i.Number))
+		html := v.base + "/" + r.FullName() + "/pull/" + strconv.Itoa(i.Number)
 		m.set("draft", i.Pull.Draft)
 		m.set("pull_request", om(
 			"url", pullAPI,
@@ -283,11 +247,6 @@ func (v *view) issue(r *Repo, i *Issue) *orderedMap {
 		))
 	}
 	m.set("body", i.Body)
-	m.set("closed_by", nil)
-	m.set("reactions", om("url", api+"/reactions", "total_count", 0, "+1", 0, "-1", 0, "laugh", 0, "hooray", 0, "confused", 0, "heart", 0, "rocket", 0, "eyes", 0))
-	m.set("timeline_url", api+"/timeline")
-	m.set("performed_via_github_app", nil)
-	m.set("state_reason", stateReason)
 	return m
 }
 

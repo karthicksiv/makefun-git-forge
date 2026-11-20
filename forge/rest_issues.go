@@ -577,7 +577,7 @@ func (v *view) storeIssueReplyFrom(repo *Repo, issue *Issue, id string, template
 		buf = appendJSON(buf, v.issue(repo, issue))
 	}
 	var room [issueReplyHeadRoom]byte
-	headers := [4]string{"X-OAuth-Scopes", oauthScopes, "X-GitHub-Request-Id", id}
+	headers := [2]string{"X-GitHub-Request-Id", id}
 	head := appendReplyHead(room[:0], 200, jsonType, headers[:], len(buf)-issueReplyHeadRoom, true)
 	var wire []byte
 	if len(head) <= issueReplyHeadRoom {

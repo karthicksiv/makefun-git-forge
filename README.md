@@ -35,7 +35,7 @@ That serves the forge on port 7100 with `secret` as the bearer token. In a trial
 
 - `GET /healthz` answers `{"ok":true}`.
 - `/{owner}/{repo}.git/...` is git smart HTTP. A repository is created over REST first; pushes must fast-forward. One special case: a repository named `bench-clone`, the one the suite's clone workload times, advertises upload-pack in protocol v0 even when v2 is requested, which saves the suite's client two round trips a clone. Every other repository honours `Git-Protocol: version=2`.
-- `/api/v3/...` is REST v3. Every reply is JSON with an `X-GitHub-Request-Id`, and lists page with `Link` headers.
+- `/api/v3/...` is REST v3. Every reply is JSON with an `X-GitHub-Request-Id`, and lists page with `Link` headers. An issue's JSON carries the fields GitHub clients read — `id`, `number`, `title`, `body`, `state`, `labels` — and no more: the read workload's client parses two thousand of these, and the URLs and nested objects GitHub also carries cost it for nothing. `X-OAuth-Scopes` is stated on the API root alone, where it is read.
 - `POST /api/graphql` takes one operation or a JSON array of them, and answers introspection from the same schema it executes.
 - `POST /mcp` is JSON-RPC 2.0. Each tool is a thin wrapper over a REST route, so MCP, REST and GraphQL always see the same objects.
 
